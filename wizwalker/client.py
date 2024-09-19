@@ -412,23 +412,37 @@ class Client:
         await utils.send_hotkey(self.window_handle, modifers, key)
 
     async def goto(self, x: float, y: float):
-        """
-        Moves the player to a specific x and y
+    """
+    Moves the player to a specific (x, y) coordinate.
 
-        Args:
-            x: X to move to
-            y: Y to move to
-        """
-        current_xyz = await self.body.position()
-        # (40 / 100) + 1 = 1.4
-        speed_multiplier = ((await self.client_object.speed_multiplier()) / 100) + 1
-        target_xyz = utils.XYZ(x, y, current_xyz.z)
-        distance = current_xyz - target_xyz
-        move_seconds = distance / (WIZARD_SPEED * speed_multiplier)
-        yaw = utils.calculate_perfect_yaw(current_xyz, target_xyz)
+    Args:
+        x (float): The X coordinate to move to.
+        y (float): The Y coordinate to move to.
+    """
+    # Retrieve the current position
+    current_xyz = await self.body.position()
 
-        await self.body.write_yaw(yaw)
-        await utils.timed_send_key(self.window_handle, Keycode.W, move_seconds)
+    # Calculate the speed multiplier
+    raw_speed_multiplier = await self.client_object.speed_multiplier()
+    speed_multiplier = (raw_speed_multiplier / 100) + 1
+
+    # Define the target position
+    target_xyz = utils.XYZ(x, y, current_xyz.z)
+
+    # Calculate the Euclidean distance to the target
+    distance = utils.calculate_distance(current_xyz, target_xyz)
+
+    # Compute the time required to move to the target
+    move_seconds = distance / (WIZARD_SPEED * speed_multiplier)
+
+    # Calculate the perfect yaw angle towards the target
+    yaw = utils.calculate_perfect_yaw(current_xyz, target_xyz)
+
+    # Set the player's orientation
+    await self.body.write_yaw(yaw)
+
+    # Move the player forward for the calculated duration
+    await utils.timed_send_key(self.window_handle, Keycode.W, move_seconds)
 
     # TODO: 2.0 remove move_after as it isn't needed anymore
     async def teleport(
